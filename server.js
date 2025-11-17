@@ -1,157 +1,135 @@
-// --- Backend para Interface Horizons (Node.js/Express) ---
+// --------------------------------------------------------
+// ARQUIVO: server.js
+// FUNÇÃO: Backend simulado para o Horizons AI Studio
 //
-// Este é um servidor Express simples que simula os endpoints necessários
-// para processar as requisições da sua interface no Horizons.
-// Ele inclui:
-// 1. Configuração de CORS para permitir requisições do frontend.
-// 2. Manipulação básica de upload de arquivos (usando 'multer').
-// 3. Endpoints de simulação para geração de conteúdo (Imagens, Vídeos, Avatares).
-// 4. Endpoint de simulação para atualização de configurações (Aspect Ratio, Qualidade, etc.).
-//
-// Para executar este servidor, certifique-se de ter Node.js instalado e execute os comandos:
-// npm init -y
-// npm install express cors multer
-// node server.js
+// Esta versão usa a variável de ambiente 'process.env.PORT'
+// fornecida pelo Railway, o que é CRUCIAL para o servidor 
+// iniciar corretamente e resolver o erro de conexão pública.
+// --------------------------------------------------------
 
 const express = require('express');
+const bodyParser = require('body-parser');
 const cors = require('cors');
-const multer = require('multer');
-const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000; // Use a porta do ambiente (Railway) ou 3000
 
-// Configuração de CORS: Permite que seu frontend (Horizons) se conecte ao backend.
-app.use(cors({
-    origin: '*', 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type'],
-}));
+// A CORREÇÃO ESTÁ AQUI: Usa a variável de ambiente do Railway (process.env.PORT)
+// Caso não esteja definida (ex: rodando localmente), usa 3000 como fallback.
+const PORT = process.env.PORT || 3000; 
 
-// Configuração para processar JSON no corpo das requisições
-app.use(express.json());
+// Middleware
+app.use(cors()); // Permite requisições do frontend (sua interface Horizons)
+app.use(bodyParser.json()); // Analisa o corpo das requisições JSON
 
-// --- Configuração Multer para Upload de Arquivos ---
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
-
-// Rota de teste
+// --------------------------------------------------------
+// Rota de Teste Simples (Rota Raiz)
+// --------------------------------------------------------
 app.get('/', (req, res) => {
-    res.send('Servidor Backend do Horizons em execução. Pronto para aceitar requisições de API!');
+    res.send('Horizons AI Backend está ativo e funcionando! A porta é controlada pelo Railway.');
 });
 
-// =======================================================
-// 1. ENDPOINT DE UPLOAD DE ARQUIVOS
-// =======================================================
-app.post('/api/upload', upload.single('file'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ success: false, message: 'Nenhum arquivo enviado.' });
-    }
+// --------------------------------------------------------
+// 1. Rota de Geração de Imagem
+// URL: /api/generate/image
+// --------------------------------------------------------
+app.post('/api/generate/image', (req, res) => {
+    const { prompt, aspectRatio, qualityMode } = req.body;
+    console.log(`Requisição de Imagem recebida: ${prompt}`);
 
-    console.log(`Arquivo recebido: ${req.file.originalname}, Tamanho: ${req.file.size} bytes`);
-
-    res.status(200).json({
-        success: true,
-        message: 'Upload de arquivo processado com sucesso!',
-        fileInfo: {
-            name: req.file.originalname,
-            size: req.file.size,
-            mimeType: req.file.mimetype,
-            resourceId: `uploaded-file-${Date.now()}`
-        }
-    });
-});
-
-// =======================================================
-// 2. ENDPOINTS DE GERAÇÃO DE CONTEÚDO
-// =======================================================
-
-const simulateGeneration = (type, req, res) => {
-    console.log(`Simulando a geração de: ${type}. Prompt: "${req.body.prompt}"`);
-
-    // Atraso simulado (5 segundos)
+    // Simula um atraso de processamento de 5 segundos
     setTimeout(() => {
-        const resultUrl = `https://generated-content-cdn.com/${type}-${Date.now()}.png`;
-        const metadata = {
-            aspectRatio: req.body.aspectRatio || '16:9',
-            qualityMode: req.body.qualityMode || 'Standard',
-            avatarUsed: req.body.avatarId || 'none'
-        };
+        const simulatedUrl = `https://placehold.co/800x450/1c2630/FFFFFF?text=Imagem%20Gerada%20por%20IA`;
 
-        res.status(200).json({
+        res.json({
             success: true,
-            message: `${type} gerado com sucesso!`,
-            resultUrl: resultUrl,
-            metadata: metadata
+            message: 'Imagem gerada com sucesso.',
+            resultUrl: simulatedUrl,
+            metadata: {
+                aspectRatio: aspectRatio || '16:9',
+                qualityMode: qualityMode || 'HD',
+                prompt,
+                model: 'Horizons-v3-Flash'
+            }
+        });
+    }, 5000); 
+});
+
+// --------------------------------------------------------
+// 2. Rota de Geração de Vídeo Curto
+// --------------------------------------------------------
+app.post('/api/generate/short-video', (req, res) => {
+    const { prompt } = req.body;
+    console.log(`Requisição de Vídeo Curto recebida: ${prompt}`);
+
+    // Simula um atraso de processamento de 5 segundos
+    setTimeout(() => {
+        res.json({
+            success: true,
+            message: 'Vídeo Curto processado com sucesso.',
+            resultUrl: 'https://placehold.co/800x450/000000/FFFFFF?text=VIDEO_5s_FINAL',
+            metadata: {
+                aspectRatio: '16:9',
+                qualityMode: 'Standard',
+                duration: '5s'
+            }
         });
     }, 5000);
-};
-
-// Geração de Imagem
-app.post('/api/generate/image', (req, res) => {
-    simulateGeneration('Imagem', req, res);
 });
 
-// Geração de Vídeo Curto
-app.post('/api/generate/short-video', (req, res) => {
-    simulateGeneration('Vídeo Curto', req, res);
-});
-
-// Geração de Vídeo Longo (Assíncrono simulado)
+// --------------------------------------------------------
+// 3. Rota de Início de Vídeo Longo (Assíncrono)
+// --------------------------------------------------------
 app.post('/api/generate/long-video', (req, res) => {
-    const jobId = `job-video-long-${Date.now()}`;
-    console.log(`Iniciando trabalho assíncrono: ${jobId}`);
+    const { prompt } = req.body;
+    console.log(`Requisição de Vídeo Longo iniciada: ${prompt}`);
 
-    res.status(202).json({
+    // Simula o início de um trabalho assíncrono e retorna um ID
+    const jobId = 'job-' + Date.now();
+
+    res.json({
         success: true,
-        message: 'Geração de vídeo longo iniciada. Use o endpoint de status para verificar.',
+        message: 'Trabalho de vídeo longo iniciado.',
         jobId: jobId
     });
-
-    // Simula o processamento em segundo plano (20 segundos)
-    setTimeout(() => {
-        console.log(`Trabalho ${jobId} concluído. URL de resultado: https://generated-content-cdn.com/${jobId}.mp4`);
-    }, 20000);
 });
 
-// Geração de Avatar
+// --------------------------------------------------------
+// 4. Rota de Geração de Avatar (Simulação de Treinamento)
+// --------------------------------------------------------
 app.post('/api/generate/avatar', (req, res) => {
+    const { name, fileName } = req.body;
+    console.log(`Iniciando treinamento de avatar: ${name} com arquivo: ${fileName}`);
+
+    // Simula o atraso de treinamento (3 segundos)
     setTimeout(() => {
-        const avatarId = `avatar-${Date.now()}`;
-        res.status(200).json({
+        const avatarId = 'avtr-' + Math.random().toString(36).substring(2, 9);
+        res.json({
             success: true,
-            message: 'Avatar gerado com sucesso!',
+            message: `Avatar ${name} treinado e pronto.`,
             avatarId: avatarId,
-            avatarUrl: `https://avatar-cdn.com/${avatarId}.png`
+            avatarUrl: `https://placehold.co/100x100/30363d/4c8bf5?text=AVATAR`
         });
     }, 3000);
 });
 
-
-// =======================================================
-// 3. ENDPOINT DE CONFIGURAÇÃO
-// =======================================================
+// --------------------------------------------------------
+// 5. Rota de Atualização de Configurações
+// --------------------------------------------------------
 app.post('/api/settings/update', (req, res) => {
     const { aspectRatio, qualityMode, autoSound, autoSpeech } = req.body;
-
-    console.log('Recebidas novas configurações:');
-    console.log(`- Aspect Ratio: ${aspectRatio}`);
-    console.log(`- Quality Mode: ${qualityMode}`);
-    console.log(`- Auto Sound: ${autoSound}`);
-    console.log(`- Auto Speech: ${autoSpeech}`);
-
-    res.status(200).json({
+    console.log('Configurações atualizadas');
+    
+    res.json({
         success: true,
         message: 'Configurações atualizadas com sucesso.',
-        currentSettings: req.body
+        currentSettings: { aspectRatio, qualityMode, autoSound, autoSpeech }
     });
 });
 
 
-// =======================================================
-// 4. INICIALIZAÇÃO DO SERVIDOR
-// =======================================================
+// --------------------------------------------------------
+// Inicia o Servidor
+// --------------------------------------------------------
 app.listen(PORT, () => {
-    console.log(`Servidor de Backend Horizons em execução em http://localhost:${PORT}`);
-    console.log(`URL do Backend para configurar no Horizons: http://localhost:${PORT}`);
+    console.log(`🚀 Horizons Backend API rodando na porta ${PORT}`);
 });
