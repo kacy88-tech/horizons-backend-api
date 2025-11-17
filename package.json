@@ -1,0 +1,11 @@
+{
+  "name": "horizons-backend-simulator",
+  "version": "1.0.0",
+  "description": "Simulador de Backend para a interface Horizons, utilizando Express, CORS e Multer.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
